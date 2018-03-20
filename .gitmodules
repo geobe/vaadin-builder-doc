@@ -1,0 +1,6 @@
+[submodule "wiki"]
+	path = wiki
+	url = https://github.com/geobe/vaadin-builder.wiki.git
+[submodule "vaadin-builder"]
+	path = vaadin-builder
+	url = https://github.com/geobe/vaadin-builder.git
