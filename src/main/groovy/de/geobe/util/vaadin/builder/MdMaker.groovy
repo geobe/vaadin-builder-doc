@@ -65,11 +65,17 @@ and fields (aka [Server-Side Components]\
 A special component is `subtree`. It is used to include a whole component
 subtree that is defined in a separate class.
 
+Alignment properties [are handled differently](Special-Features) to Vaadin.
+And you can also add additional components to the builder using its 
+[addCustomContainer()](https://geobe.github.io/vaadin-builder-doc/index.html?de/geobe/util/vaadin/builder/VaadinBuilder.html)
+and
+[addCustomField()](https://geobe.github.io/vaadin-builder-doc/index.html?de/geobe/util/vaadin/builder/VaadinBuilder.html) methods.
+
 ### Subtree Component
 
 Key | Class Documentation
 ----|----
-[subtree](SubtreeDetails)| \
+[subtree](Subtree)| \
 [SubTree](https://geobe.github.io/vaadin-builder-doc/index.html?de/geobe/util/vaadin/builder/SubTree.html)
 
 ### Layout Components
@@ -89,7 +95,7 @@ ${buildComponentsTable(VaadinBuilder.F)}
      * Build an index page for VaadinBuilder supported components in markdown format.
      */
     void makeComponentIndex() {
-        def mdf = new File(base + 'Components.md')
+        def mdf = new File(base + 'Home.md')
         mdf.withWriter('utf-8') { writer ->
             writer.write indexHeader
         }
@@ -110,10 +116,10 @@ ${buildComponentsTable(VaadinBuilder.F)}
             try {
                 def component = loader.loadClass(path)
                 def url = linkForClass(component)
-                def mdf = new File(base + "components/${key.capitalize()}Details.md")
+                def mdf = new File(base + "components/${component.simpleName}.md")
                 mdf.withWriter('utf-8') { writer ->
                     writer.write componentHead(key, component, url)
-                    writeLinesForMethods(writer, key, component)
+                    writeLinesForMethods(writer, component)
                 }
             } catch (Exception ex) {
                 println(ex)
@@ -130,7 +136,7 @@ ${buildComponentsTable(VaadinBuilder.F)}
                 if(path) {
                     try {
                         def clazz = loader.loadClass(path)
-                        list.append "[$idx](components/${idx.capitalize()}Details) | "
+                        list.append "[$idx](${clazz.simpleName}) | "
                         list.append "${linkForClass(clazz)}\n"
                     } catch (Exception ex) {
                         println(ex)
@@ -141,10 +147,15 @@ ${buildComponentsTable(VaadinBuilder.F)}
         list.toString()
     }
 
-    private writeLinesForMethods(Writer writer, String key, Class clazz) {
+    private writeLinesForMethods(Writer writer, Class clazz) {
+        def next = false
         for (Class aClass = clazz; aClass; aClass = aClass.superclass) {
             if (!aClass.name.startsWith('com.vaadin'))
                 break
+            if (next) {
+                writer.write "**from** | ${linkForClass(aClass)} |\n"
+            }
+            next = true
             def props = propertiesForClass(aClass)
             if (props) {
                 props.each {
@@ -165,7 +176,14 @@ ${buildComponentsTable(VaadinBuilder.F)}
         String type
         switch (paramtype) {
             case ~/interface.*/:
-                type = 'Closure'
+                if(paramLink.startsWith('com.vaadin')) {
+                    def typelink = paramtype.replaceFirst(/.* /, '')
+                            .replaceAll(/\./, '/')
+                            .replaceAll(/\$/, '.')
+                    type = "[interface ${param.simpleName}](${vaadinApiUrl}index.html?${typelink}.html)"
+                } else {
+                    type = paramtype
+                }
                 break
             case ~/class \[L.*/:
                 def cl = paramtype.replaceFirst(/.*\[L/, '')
